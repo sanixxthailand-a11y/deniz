@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Youtube · Feed Video & MP4 Player</title>
+    <!-- Font Awesome & Google Font -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f9f9f9;
+            color: #0f0f0f;
+        }
+        /* ----- SIDEBAR (menu garis tiga) ----- */
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: -280px;
+            width: 260px;
+            height: calc(100% - 56px);
+            background: white;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            transition: left 0.25s ease;
+            z-index: 150;
+            overflow-y: auto;
+            padding: 12px 0;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar-overlay {
+            position: fixed;
+            top: 56px; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 140;
+            display: none;
+        }
+        .sidebar-overlay.show { display: block; }
+        .sidebar-section {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 10px 24px;
+            cursor: pointer;
+            font-size: 15px;
+            color: #0f0f0f;
+        }
+        .sidebar-item i { width: 24px; font-size: 18px; color: #606060; }
+        .sidebar-item:hover { background: #f2f2f2; }
+        .sidebar-item.active { background: #e5e5e5; font-weight: 500; }
+        .sidebar-title {
+            padding: 8px 24px;
+            font-size: 14px;
+            color: #606060;
+            font-weight: 500;
+        }
+        /* ----- HEADER ----- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            height: 56px;
+            background: white;
+            border-bottom: 1px solid #e5e5e5;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+        .header-left, .header-right { display: flex; align-items: center; gap: 16px; }
+        .menu-icon { font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; }
+        .menu-icon:hover { background: #f2f2f2; }
+        .logo { display: flex; align-items: center; gap: 2px; cursor: pointer; }
+        .logo i { color: #ff0000; font-size: 28px; }
+        .logo span { font-size: 20px; font-weight: 600; }
+        .logo .tube { font-weight: 400; }
+        .header-middle {
+            display: flex; flex: 0 1 600px; min-width: 200px;
+        }
+        .search-box {
+            display: flex; width: 100%; height: 40px;
+        }
+        .search-box input {
+            flex:1; padding:0 16px; border:1px solid #ccc; border-right:none;
+            border-radius:20px 0 0 20px; outline:none; font-size:16px;
+        }
+        .search-btn {
+            background:#f8f8f8; border:1px solid #ccc; border-left:none;
+            border-radius:0 20px 20px 0; padding:0 20px; cursor:pointer;
+        }
+        .search-btn:hover { background: #eaeaea; }
+        .header-icon {
+            font-size:20px; padding:8px; border-radius:50%; cursor:pointer;
+        }
+        .header-icon:hover { background:#f2f2f2; }
+        .avatar, .login-btn {
+            width:36px; height:36px; border-radius:50%; background:#065fd4;
+            color:white; display:flex; align-items:center; justify-content:center;
+            font-weight:500; cursor:pointer;
+        }
+        .login-btn {
+            background: transparent; color:#065fd4; border:1px solid #ccc; 
+            width: auto; padding:0 16px; border-radius:18px; gap:6px;
+        }
+        /* ----- MODAL (Login/Register) ----- */
+        .modal {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.5); display: none; justify-content:center;
+            align-items:center; z-index:500;
+        }
+        .modal-card {
+            background: white; width:400px; max-width:90%; border-radius:16px;
+            padding:24px; box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; margin-bottom:20px;
+        }
+        .modal-title { font-size:22px; font-weight:500; }
+        .close-modal { font-size:24px; cursor:pointer; }
+        .input-group { margin-bottom:16px; }
+        .input-group label { display:block; margin-bottom:6px; font-weight:500; }
+        .input-group input {
+            width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;
+            font-size:16px;
+        }
+        .modal-btn {
+            width:100%; padding:12px; background:#065fd4; color:white;
+            border:none; border-radius:24px; font-weight:600; font-size:16px;
+            cursor:pointer; margin-top:8px;
+        }
+        .modal-footer { text-align:center; margin-top:16px; color:#606060; }
+        .modal-footer span { color:#065fd4; cursor:pointer; font-weight:500; }
+        /* ----- FEED GRID (YouTube Style) ----- */
+        .feed-container {
+            max-width: 1600px;
+            margin: 24px auto 0;
+            padding: 0 24px;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px 16px;
+        }
+        .video-card {
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .video-card:hover .video-thumb {
+            border-radius: 8px;
+        }
+        .video-thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background-size: cover;
+            background-position: center;
+            border-radius: 12px;
+            background-color: #e5e5e5;
+        }
+        .video-info-card {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .channel-avatar-small {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-size: cover;
+            flex-shrink: 0;
+        }
+        .video-meta {
+            flex: 1;
+        }
+        .video-title-card {
+            font-weight: 500;
+            font-size: 15px;
+            line-height: 1.4;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .channel-name-card {
+            font-size: 13px;
+            color: #606060;
+            margin-bottom: 2px;
+        }
+        .video-stats {
+            font-size: 12px;
+            color: #606060;
+        }
+        /* ----- WATCH PAGE (Player + detail) ----- */
+        .watch-container {
+            max-width: 1750px;
+            margin: 24px auto 0;
+            padding: 0 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .video-section { flex: 2.2; min-width: 300px; }
+        .recommendations { flex: 1.2; min-width: 300px; }
+        .player-wrapper {
+            background:#000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        video { width: 100%; height: auto; display: block; max-height: 70vh; object-fit: contain; }
+        .video-info { margin-top: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e5e5; }
+        .video-title {
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .badge-mp4 {
+            background:#f2f2f2;
+            padding:4px 10px;
+            border-radius:16px;
+            font-size:13px;
+            color:#606060;
+            margin-left:12px;
+        }
+        .channel-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .channel-left { display: flex; align-items: center; gap: 16px; }
+        .channel-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+        .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .action-btn {
+            background:#f2f2f2;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .action-btn.active { background:#065fd4; color: white; }
+        .action-btn:hover { background:#e5e5e5; }
+        .subscribe-btn {
+            background:#0f0f0f;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .subscribe-btn.subscribed {
+            background: #e5e5e5;
+            color: #0f0f0f;
+        }
+        .description-box {
+            margin-top: 16px;
+            background: #f2f2f2;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .rec-header {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .rec-list { display: flex; flex-direction: column; gap: 12px; }
+        .rec-item {
+            display: flex;
+            gap: 10px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 10px;
+            transition: 0.1s;
+        }
+        .rec-item:hover { background:#eaeaea; }
+        .rec-thumb {
+            width: 168px;
+            height: 94px;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+        .comment-section { margin-top: 24px; }
+        .comment-input-area {
+            display: flex;
+            gap: 12px;
+            margin: 16px 0;
+            align-items: center;
+        }
+        .comment-input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 24px;
+            outline: none;
+            font-size: 14px;
+        }
+        .comment-item {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-size: cover;
+            flex-shrink: 0;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 45px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            min-width: 200px;
+            z-index: 300;
+        }
+        .dropdown-content a {
+            display: block;
+            padding: 12px 16px;
+            color: #0f0f0f;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .dropdown-content a:hover { background:#f2f2f2; }
+        .show { display: block; }
+        .saved-page {
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .saved-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .saved-card {
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .saved-thumb { height: 140px; background-size: cover; background-position: center; }
+        .saved-info { padding: 8px; background: white; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .footer-note {
+            text-align: center;
+            padding: 24px;
+            color: #909090;
+            border-top: 1px solid #e5e5e5;
+            margin-top: 32px;
+        }
+        .back-to-feed {
+            margin: 16px 0 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: none;
+            color: #065fd4;
+            cursor: pointer;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+        <div class="sidebar-item active" id="sidebarBeranda" onclick="showFeedPage(); toggleSidebar()"><i class="fas fa-home"></i> Beranda</div>
+        <div class="sidebar-item" onclick="showHistoryPage(); toggleSidebar()"><i class="fas fa-history"></i> Riwayat</div>
+        <div class="sidebar-item" onclick="showLikedPage(); toggleSidebar()"><i class="fas fa-thumbs-up"></i> Video Disukai</div>
+        <div class="sidebar-item" onclick="showSavedPage(); toggleSidebar()"><i class="fas fa-bookmark"></i> Tersimpan</div>
+    </div>
+    <div class="sidebar-section">
+        <div class="sidebar-title">Langganan</div>
+        <div id="subscribedChannelsList" class="sidebar-item" style="flex-direction:column; align-items:flex-start; gap:4px;"></div>
+    </div>
+</nav>
+
+<!-- MODAL LOGIN/REGISTER -->
+<div class="modal" id="authModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span class="modal-title" id="modalTitle">Masuk</span>
+            <i class="fas fa-times close-modal" onclick="closeAuthModal()"></i>
+        </div>
+        <form id="authForm" onsubmit="handleAuth(event)">
+            <div class="input-group"><label>Username</label><input type="text" id="username" placeholder="Nama pengguna" required></div>
+            <div class="input-group"><label>Password</label><input type="password" id="password" placeholder="Kata sandi" required></div>
+            <div class="input-group" id="confirmGroup" style="display:none;"><label>Konfirmasi Password</label><input type="password" id="confirmPassword" placeholder="Ulangi kata sandi"></div>
+            <button type="submit" class="modal-btn" id="authSubmitBtn">Masuk</button>
+        </form>
+        <div class="modal-footer" id="modalFooter">Belum punya akun? <span onclick="toggleAuthMode()">Daftar</span></div>
+    </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-left">
+        <div class="menu-icon" onclick="toggleSidebar()"><i class="fas fa-bars"></i></div>
+        <div class="logo" onclick="showFeedPage()"><i class="fab fa-youtube"></i><span>YouTube<span class="tube"></span></span></span></div>
+    </div>
+    <div class="header-middle">
+        <div class="search-box">
+            <input type="text" placeholder="Telusuri" id="searchInput" value="">
+            <button class="search-btn" onclick="performSearch()"><i class="fas fa-search"></i></button>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="header-icon"><i class="fas fa-video"></i></div>
+        <div class="header-icon"><i class="far fa-bell"></i></div>
+        <div id="userArea"></div>
+    </div>
+</header>
+
+<!-- HALAMAN FEED (Beranda) -->
+<div id="feedPage" class="page active">
+    <div class="feed-container">
+        <div class="video-grid" id="videoFeedGrid"></div>
+    </div>
+    <div class="footer-note">masih updete tunggu......</div>
+</div>
+
+<!-- HALAMAN WATCH (Player & Detail) -->
+<div id="watchPage" class="page">
+    <div class="watch-container">
+        <section class="video-section">
+            <button class="back-to-feed" onclick="showFeedPage()"><i class="fas fa-arrow-left"></i> Kembali ke Beranda</button>
+            <div class="player-wrapper">
+                <video id="mainVideo" controls poster="https://storage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg">
+                    <source id="videoSource" src="" type="video/mp4">
+                </video>
+            </div>
+            <div class="video-info">
+                <div class="video-title" id="videoTitleDisplay"></div>
+                <div class="channel-bar">
+                    <div class="channel-left">
+                        <div class="channel-avatar" id="channelAvatar" style="background-image:url('')"></div>
+                        <div><div class="channel-name" id="channelNameDisplay"></div><div class="subscriber-count" id="subscriberCount">-</div></div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="subscribe-btn" id="subscribeBtn" onclick="toggleSubscribe()"><i class="far fa-bell"></i> Subscribe</button>
+                        <div class="action-buttons">
+                            <button class="action-btn" id="likeBtn" onclick="toggleLike()"><i class="far fa-thumbs-up"></i> <span id="likeCount">0</span></button>
+                            <button class="action-btn" id="saveBtn" onclick="toggleSave()"><i class="far fa-bookmark"></i> Simpan</button>
+                            <button class="action-btn"><i class="fas fa-share"></i> Bagikan</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="description-box" id="videoDescription"></div>
+            </div>
+            <div class="comment-section">
+                <div style="display:flex; gap:16px; align-items:center;"><span style="font-weight:500;"><i class="far fa-comment-alt"></i> <span id="commentCount">0</span> Komentar</span></div>
+                <div class="comment-input-area">
+                    <div class="comment-avatar" id="commentAvatar" style="background-image:url('https://picsum.photos/id/65/40/40')"></div>
+                    <input type="text" id="commentInput" placeholder="Tambahkan komentar...">
+                    <button class="action-btn" onclick="postComment()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                <div id="commentList"></div>
+            </div>
+        </section>
+        <aside class="recommendations">
+            <div class="rec-header"><i class="fas fa-play-circle" style="color:#ff0000;"></i> Rekomendasi</div>
+            <div class="rec-list" id="recListWatch"></div>
+        </aside>
+    </div>
+</div>
+
+<!-- HALAMAN KOLEKSI (Simpan, Riwayat, Disukai) -->
+<div id="savedPage" class="page">
+    <div class="saved-page">
+        <h2 id="collectionTitle"><i class="fas fa-bookmark"></i> Video Disimpan</h2>
+        <div id="collectionGrid" class="saved-grid"></div>
+        <button class="action-btn" style="margin-top:24px;" onclick="showFeedPage()"><i class="fas fa-arrow-left"></i> Kembali ke Beranda</button>
+    </div>
+</div>
+
+<script>
+    // ===================== DATA VIDEO (dengan thumb dan avatar terpisah) =====================                                { 
+
+    const videoDB = [ 
+                                      { 
+            id: 'v41', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v42', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v43', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v44', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v45', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v46', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v47', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v48', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v49', title: 'Militer Latihan', channel:'Dontolz_admin', 
+            mp4:'https://gtdkyy.file-photo.com/net-disk/20260324/0759d2dc-2ae5-49e8-94f9-25ed8dd8b132/fc73991d2f44c07306959e41af80112a.mkv', 
+            poster:'https://immediate-gold-msouppanhm.edgeone.app/Screenshot_20260416-201340.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://immediate-gold-msouppanhm.edgeone.app/Screenshot_20260416-201340.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'97rb' 
+        },
+                                      { 
+            id: 'v50', title: 'mia klifah', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/3NqI75l5uG-cYYnLQO9Ji', 
+            poster:'https://immediate-gold-msouppanhm.edgeone.app/Screenshot_20260416-200244.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://immediate-gold-msouppanhm.edgeone.app/Screenshot_20260416-200244.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'84rb' 
+        },
+                    { 
+            id: 'v1', title: 'skolah cik', channel:'Dontolz_admin', 
+            mp4:'https://fcyphz.twimg-image.cc/net-disk/20260329/5e919be9-8e52-4bd6-ae8f-af76bbb14577/aeae42c0bf365a8ef312bada528c307f.mkv', 
+            poster:'https://immediate-gold-msouppanhm.edgeone.app/Screenshot_20260416-200733.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://immediate-gold-msouppanhm.edgeone.app/Screenshot_20260416-200733.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'900rb' 
+        },
+        { 
+            id: 'v2', title: '4 kage', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/Aqe9ZZ3m1l-PAxMAM3bZQ', 
+            poster:'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg', 
+            desc:'Film surealis pertama dari Blender.', 
+            thumb:'https://financial-indigo-yuuwapt2zi.edgeone.app/Screenshot_20260415-091706.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'890 rb' 
+        },
+        { 
+            id: 'v3', title: 'Bagun tidur', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/cuR9g-Bangun%20Tidur%20Langsung%20di%20Sepong%20Ayang%20Xreindeers%20Crot%20_%20DoodStream.mp4', 
+            poster:'https://storage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg', 
+            desc:'Petualangan seorang gadis dan naga.', 
+            thumb:'https://financial-indigo-yuuwapt2zi.edgeone.app/Screenshot_20260415-092146.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'2,3 jt' 
+        },
+        { 
+            id: 'v4', title: 'kak adik', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/tEgrt-31bsocyx9vqd.mp4', 
+            poster:'https://storage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg', 
+            desc:'Sci-fi pendek dengan efek visual.', 
+            thumb:'https://financial-indigo-yuuwapt2zi.edgeone.app/Screenshot_20260415-092335.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1,1 jt' 
+        },
+        { 
+            id: 'v5', title: 'bokep jepang', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/jYy3x6qXB-se1xt4s1wz9p.mp4', 
+            poster:'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://financial-indigo-yuuwapt2zi.edgeone.app/Screenshot_20260415-093120.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'340 rb' 
+        },
+        { 
+            id: 'v6', title: '.', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/26c7f8a81.mp4', 
+            poster:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-094524.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-094524.jpg', 
+            channelAvatar: 'https://picsum.photos/id/43/44/44',
+            views:'9 rb' 
+        },
+        { 
+            id: 'v7', title: 'Tiktoker Viral', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/d8oKH4FJ1.mp4',
+            poster:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-094933.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-094933.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'30 rb' 
+        },
+       { 
+            id: 'v8', title: 'YESSA', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/VaN9TcEThO-YMkLNTjn9m', 
+            poster:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-095548.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-095548.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'34 rb' 
+        },
+        { 
+            id: 'v9', title: 'part 2 YESSA', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/YLeu7imBJ3-75i3M45XG8', 
+            poster:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-095548.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://exuberant-harlequin-jg4icfh0dl.edgeone.app/Screenshot_20260415-095548.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94 rb' 
+        },
+       { 
+            id: 'v10', title: 'nana polos', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/K71h70DKT8-yEbCnRekA5', 
+            poster:'https://prominent-salmon-exyif82crv.edgeone.app/Screenshot_20260415-100721.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://prominent-salmon-exyif82crv.edgeone.app/Screenshot_20260415-100721.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'990 rb' 
+        },
+       { 
+            id: 'v11', title: 'cimmolla', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/MAUz3tlWi-QukeEHxVp', 
+            poster:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-101900.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-101900.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1jt rb' 
+        },
+        { 
+            id: 'v12', title: 'suami pergi waktunya colmex', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/731b95b11.mp4', 
+            poster:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-102127.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-102127.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1jt rb' 
+        },
+        { 
+            id: 'v13', title: 'Al gewek sama tante', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/uAIO3DG73-s6zgabpp3ilx.mp4', 
+            poster:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-102443.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-102443.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1jt rb' 
+        },
+        { 
+            id: 'v14', title: 'canik nih pegawai', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/sMlKM28u1.mp4', 
+            poster:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-102905.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://external-tan-vtpkhdqzt7.edgeone.app/Screenshot_20260415-102905.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1,7jt' 
+        },
+         { 
+            id: 'v15', title: 'canik nih', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/cea5cccc1.mp4', 
+            poster:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-131550.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-131550.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1rb' 
+        },
+        { 
+            id: 'v16', title: 'kalau senyum makincantik', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/0951abbb1.mp4', 
+            poster:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-131748.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-131748.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'97rb' 
+        },
+        { 
+            id: 'v17', title: 'rambut pendek tengtop', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/ndm5U0gwzA-nzFG2QjXaF', 
+            poster:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-132503.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-132503.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'984rb' 
+        },
+        { 
+            id: 'v18', title: 'barbain sama kucing', channel:'Dontolz_admin', 
+            mp4:'https://vidoycdn.b-cdn.net/dustYacznC-fDEs0LxfmL?token=azOYONe5eeW0GieLYi1L1w&expires=1776270280', 
+            poster:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-133616.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://mathematical-green-xcleliqx9g.edgeone.app/Screenshot_20260415-133616.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'884rb' 
+        },
+        { 
+            id: 'v19', title: 'lembut', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/lCOsspZBAa-ZBo8JCjeZO', 
+            poster:'https://colossal-lime-wlfaeybo4g.edgeone.app/Screenshot_20260415-135546.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://colossal-lime-wlfaeybo4g.edgeone.app/Screenshot_20260415-135546.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'84rb' 
+        },
+        { 
+            id: 'v20', title: 'Selingkuh', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/mk8nSk2l6q-yFJsq6w55P', 
+            poster:'https://colossal-lime-wlfaeybo4g.edgeone.app/Screenshot_20260415-135852.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://colossal-lime-wlfaeybo4g.edgeone.app/Screenshot_20260415-135852.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'78rb' 
+        },
+        { 
+            id: 'v21', title: 'di kaca', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/e2GNOzq7U5-mCJgL3LfWo', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142109.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142109.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'1,6rb' 
+        },
+       { 
+            id: 'v22', title: 'mulus benig', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/aZPra4iGQK-FrBiRS9OVQ', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-141405.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-141405.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'993rb' 
+        },
+                { 
+            id: 'v23', title: 'gaun putih', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/1Ht9Sj92K-Laura%20Hijab%2002.mp4', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142303.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142303.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'387rb' 
+        },
+                { 
+            id: 'v24', title: 'di ajak mandi', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/0FBPk-bdczg6vaiab3.mp4', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142524.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142524.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'341rb' 
+        },
+                { 
+            id: 'v25', title: 'istri bosen', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/a7M5wzpDj-2em67d2urx54.mp4', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142604.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142604.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'339rb' 
+        },
+                { 
+            id: 'v26', title: 'ibuk mertua yg kesepian', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/r8OBFA539E-YdhBjSPekN', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142739.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-142739.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'384rb' 
+        },
+                { 
+            id: 'v27', title: 'suting di jpang', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/0EMcJtO5S-msbreewc4.mp4.mp4', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143214.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143214.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'4rb' 
+        },
+                { 
+            id: 'v28', title: 'Tobrut', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/UbEmsQ9kox-rXytFMobvZ', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143418.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143418.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'38rb' 
+        },
+                { 
+            id: 'v29', title: 'Tobrut lagi cik', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/2X58v-tcvf18emle9b.mp4', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143731.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143731.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'79rb' 
+        },
+                { 
+            id: 'v30', title: 'ga bisa bagar utang', channel:'Dontolz_admin', 
+            mp4:'https://vidhmm.com/EC9PvivZF-Akibat%20Penjaga%20Warung%20Tak%20Bisa%20Bayar%20Hutang.mp4', 
+            poster:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143903.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://casual-tan-5ojai91lia.edgeone.app/Screenshot_20260415-143903.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                        { 
+            id: 'v31', title: 'di ajak ckak in sama pacar', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/rRd8taHh1.mp4', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-190333.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-190333.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'941rb' 
+        },
+                        { 
+            id: 'v32', title: 'japan lagi', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/57aa68b9-d4d0-41b9-80fd-ae0778cd916a/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191240.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191240.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                        { 
+            id: 'v33', title: 'cek kamar mandi cewk', channel:'Dontolz_admin', 
+            mp4:'https://demef.pulse-player.com/ecbc51b2-fb8d-4b1d-a86c-861fe68ed005/360p/video.m3u8', 
+            poster:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://registered-brown-cqb45yd4ie.edgeone.app/Screenshot_20260415-191554.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+                                { 
+            id: 'v34', title: 'Viral', channel:'Dontolz_admin', 
+            mp4:'https://cdn.aceimg.com/507377463.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-133716.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-133716.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'99rb' 
+        },
+                                { 
+            id: 'v35', title: 'ngintip', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/2S9r1fGV1.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-134855.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-134855.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'9rb' 
+        },
+                                { 
+            id: 'v36', title: 'pacar pengen yepong', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/3L7zSLRY1.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135052.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135052.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'78rb' 
+        },
+                                { 
+            id: 'v37', title: 'pacar cantik di ewek botak', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/uVaJS9I91.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135303.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135303.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'7.9rb' 
+        },
+                                { 
+            id: 'v38', title: 'pacar sagek cik', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/CNJLWC781.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135602.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135602.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'84rb' 
+        },
+                                { 
+            id: 'v39', title: 'tante idama', channel:'Dontolz_admin', 
+            mp4:'https://cdn.aceimg.com/2623620bc.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135931.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-135931.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'949rb' 
+        },
+                              { 
+            id: 'v40', title: '.', channel:'Dontolz_admin', 
+            mp4:'https://cdn2.videy.co/DDLNf5Gi1.mp4', 
+            poster:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-140147.jpg', 
+            desc:'Video uji coba 1080p.', 
+            thumb:'https://sweet-maroon-tqnc5ogk6x.edgeone.app/Screenshot_20260416-140147.jpg', 
+            channelAvatar: 'https://applicable-harlequin-qo4jpn5iby.edgeone.app/Screenshot_20260415-082710.jpg',
+            views:'94rb' 
+        },
+
+    ];
+
+
+    let currentVideo = videoDB[0];
+    let currentUser = JSON.parse(localStorage.getItem('tubeUser')) || null;
+    let users = JSON.parse(localStorage.getItem('tubeUsers')) || [];
+    let likes = JSON.parse(localStorage.getItem('tubeLikes')) || {};
+    let saves = JSON.parse(localStorage.getItem('tubeSaves')) || {};
+    let comments = JSON.parse(localStorage.getItem('tubeComments')) || {};
+    let subscriptions = JSON.parse(localStorage.getItem('tubeSubscriptions')) || {};
+    let watchHistory = JSON.parse(localStorage.getItem('tubeHistory')) || {};
+    let currentCollectionMode = 'saved';
+    let feedSearchQuery = '';
+
+    // Helper storage
+    function saveAll() {
+        localStorage.setItem('tubeUsers', JSON.stringify(users));
+        localStorage.setItem('tubeLikes', JSON.stringify(likes));
+        localStorage.setItem('tubeSaves', JSON.stringify(saves));
+        localStorage.setItem('tubeComments', JSON.stringify(comments));
+        localStorage.setItem('tubeSubscriptions', JSON.stringify(subscriptions));
+        localStorage.setItem('tubeHistory', JSON.stringify(watchHistory));
+    }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('show'); }
+
+    // Render User & Dropdown
+    function renderUserArea() {
+        const area = document.getElementById('userArea');
+        if (currentUser) {
+            area.innerHTML = `<div class="user-menu"><div class="avatar" onclick="toggleDropdown()">${currentUser.username.charAt(0).toUpperCase()}</div><div id="userDropdown" class="dropdown-content"><a onclick="showSavedPage(); toggleDropdown()"><i class="fas fa-bookmark"></i> Tersimpan</a><a onclick="showHistoryPage(); toggleDropdown()"><i class="fas fa-history"></i> Riwayat</a><a onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar</a></div></div>`;
+        } else {
+            area.innerHTML = `<button class="login-btn" onclick="openAuthModal('login')"><i class="fas fa-user-circle"></i> Masuk</button>`;
+        }
+    }
+    window.toggleDropdown = function() { document.getElementById('userDropdown')?.classList.toggle('show'); }
+    window.openAuthModal = (mode) => { /* sama seperti sebelumnya */ authMode=mode; document.getElementById('modalTitle').innerText=mode==='login'?'Masuk':'Daftar'; document.getElementById('authSubmitBtn').innerText=mode==='login'?'Masuk':'Daftar'; document.getElementById('confirmGroup').style.display=mode==='login'?'none':'block'; document.getElementById('modalFooter').innerHTML=mode==='login'?`Belum punya akun? <span onclick="toggleAuthMode()">Daftar</span>`:`Sudah punya akun? <span onclick="toggleAuthMode()">Masuk</span>`; document.getElementById('authModal').style.display='flex'; }
+    window.closeAuthModal = () => document.getElementById('authModal').style.display = 'none';
+    window.toggleAuthMode = () => openAuthModal(authMode==='login'?'register':'login');
+    window.handleAuth = (e) => {
+        e.preventDefault(); const username = document.getElementById('username').value.trim(); const password = document.getElementById('password').value;
+        if(!username||!password) return alert('Isi semua field');
+        if(authMode === 'register') {
+            if(password !== document.getElementById('confirmPassword').value) return alert('Password tidak cocok');
+            if(users.find(u=>u.username===username)) return alert('Username sudah ada');
+            users.push({username, password}); saveAll(); alert('Registrasi berhasil'); openAuthModal('login');
+        } else {
+            const user = users.find(u=>u.username===username && u.password===password);
+            if(!user) return alert('Username/password salah');
+            currentUser = user; localStorage.setItem('tubeUser', JSON.stringify(currentUser)); closeAuthModal(); renderUserArea(); renderFeed(); updateWatchUI();
+        }
+    }
+    window.logout = () => { currentUser=null; localStorage.removeItem('tubeUser'); renderUserArea(); renderFeed(); showFeedPage(); }
+
+    // ========== FEED GRID ==========
+    function renderFeed(query = feedSearchQuery) {
+        const grid = document.getElementById('videoFeedGrid');
+        let filtered = videoDB;
+        if(query.trim()) { const q = query.toLowerCase(); filtered = videoDB.filter(v=>v.title.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q)); }
+        if(filtered.length === 0) { grid.innerHTML = '<p style="padding:32px; text-align:center;">Tidak ada video ditemukan.</p>'; return; }
+        grid.innerHTML = filtered.map(v => `
+            <div class="video-card" onclick="selectVideoToWatch('${v.id}')">
+                <div class="video-thumb" style="background-image:url('${v.thumb}')"></div>
+                <div class="video-info-card">
+                    <div class="channel-avatar-small" style="background-image:url('${v.channelAvatar}')"></div>
+                    <div class="video-meta">
+                        <div class="video-title-card">${v.title}</div>
+                        <div class="channel-name-card">${v.channel}</div>
+                        <div class="video-stats">${v.views} x ditonton</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    window.performSearch = () => {
+        feedSearchQuery = document.getElementById('searchInput').value;
+        showFeedPage();
+        renderFeed(feedSearchQuery);
+    }
+    // Tampilkan halaman feed (beranda)
+    window.showFeedPage = () => {
+        document.getElementById('feedPage').classList.add('active');
+        document.getElementById('watchPage').classList.remove('active');
+        document.getElementById('savedPage').classList.remove('active');
+        renderFeed(feedSearchQuery);
+        if (typeof toggleSidebar === 'function') { /* biarkan */ }
+        // update sidebar active visual
+        document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
+        document.getElementById('sidebarBeranda')?.classList.add('active');
+    }
+
+    // ========== WATCH PAGE ==========
+    function updateWatchUI() {
+        if(!currentVideo) return;
+        document.getElementById('videoSource').src = currentVideo.mp4;
+        document.getElementById('mainVideo').poster = currentVideo.poster;
+        document.getElementById('mainVideo').load();
+        document.getElementById('videoTitleDisplay').innerHTML = `${currentVideo.title} <span class="badge-mp4"><i class="fas fa-file-video"></i> MP4</span>`;
+        document.getElementById('channelNameDisplay').innerHTML = `${currentVideo.channel} <i class="fas fa-check-circle" style="color:#606060;"></i>`;
+        document.getElementById('channelAvatar').style.backgroundImage = `url('${currentVideo.channelAvatar}')`;
+        document.getElementById('videoDescription').innerHTML = `<i class="fas fa-info-circle"></i> <strong>${currentVideo.title}</strong> — ${currentVideo.desc} · ${currentVideo.views} x ditonton`;
+        const likeVal = likes[currentVideo.id] || 0;
+        document.getElementById('likeCount').innerText = likeVal;
+        updateSubscribeButtonWatch();
+        updateLikeSaveWatch();
+        renderCommentsWatch();
+        renderRecommendationsWatch();
+    }
+    function updateSubscribeButtonWatch() {
+        const btn = document.getElementById('subscribeBtn');
+        if(!currentUser) { btn.innerHTML = '<i class="far fa-bell"></i> Subscribe'; btn.classList.remove('subscribed'); return; }
+        const subs = subscriptions[currentUser.username] || [];
+        const isSub = subs.includes(currentVideo.channel);
+        btn.innerHTML = isSub ? '<i class="fas fa-bell"></i> Subscribed' : '<i class="far fa-bell"></i> Subscribe';
+        btn.classList.toggle('subscribed', isSub);
+    }
+    function updateLikeSaveWatch() {
+        const likeBtn = document.getElementById('likeBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        if(currentUser) {
+            const userLikes = JSON.parse(localStorage.getItem('tubeUserLikes')) || {};
+            const liked = userLikes[`${currentUser.username}_${currentVideo.id}`];
+            likeBtn.classList.toggle('active', liked);
+            const saved = saves[currentUser.username]?.includes(currentVideo.id);
+            saveBtn.classList.toggle('active', saved);
+            saveBtn.innerHTML = saved ? '<i class="fas fa-bookmark"></i> Tersimpan' : '<i class="far fa-bookmark"></i> Simpan';
+        } else { likeBtn.classList.remove('active'); saveBtn.classList.remove('active'); saveBtn.innerHTML = '<i class="far fa-bookmark"></i> Simpan'; }
+    }
+    window.toggleLike = function() {
+        if(!currentUser) return openAuthModal('login');
+        const vid = currentVideo.id;
+        if(!likes[vid]) likes[vid] = 0;
+        let userLikes = JSON.parse(localStorage.getItem('tubeUserLikes')) || {};
+        const key = `${currentUser.username}_${vid}`;
+        if(userLikes[key]) { likes[vid] = Math.max(0, likes[vid]-1); delete userLikes[key]; }
+        else { likes[vid] = (likes[vid]||0)+1; userLikes[key] = true; }
+        localStorage.setItem('tubeUserLikes', JSON.stringify(userLikes));
+        document.getElementById('likeCount').innerText = likes[vid];
+        saveAll(); updateLikeSaveWatch();
+    }
+    window.toggleSave = function() {
+        if(!currentUser) return openAuthModal('login');
+        if(!saves[currentUser.username]) saves[currentUser.username] = [];
+        const idx = saves[currentUser.username].indexOf(currentVideo.id);
+        if(idx>=0) saves[currentUser.username].splice(idx,1);
+        else saves[currentUser.username].push(currentVideo.id);
+        saveAll(); updateLikeSaveWatch();
+    }
+    window.toggleSubscribe = function() {
+        if(!currentUser) return openAuthModal('login');
+        if(!subscriptions[currentUser.username]) subscriptions[currentUser.username] = [];
+        const ch = currentVideo.channel;
+        const idx = subscriptions[currentUser.username].indexOf(ch);
+        if(idx>=0) subscriptions[currentUser.username].splice(idx,1);
+        else subscriptions[currentUser.username].push(ch);
+        saveAll(); updateSubscribeButtonWatch();
+    }
+    function renderCommentsWatch() {
+        const list = document.getElementById('commentList');
+        const vidComments = comments[currentVideo.id] || [];
+        document.getElementById('commentCount').innerText = vidComments.length;
+        list.innerHTML = vidComments.map(c=>`<div class="comment-item"><div class="comment-avatar" style="background-image:url('${c.avatar}')"></div><div class="comment-content"><div class="comment-author">@${c.user}</div><div class="comment-text">${c.text}</div></div></div>`).join('');
+    }
+    window.postComment = function() {
+        if(!currentUser) return openAuthModal('login');
+        const input = document.getElementById('commentInput');
+        const text = input.value.trim();
+        if(!text) return;
+        if(!comments[currentVideo.id]) comments[currentVideo.id] = [];
+        const avatarId = Math.floor(Math.random() * 100);
+        comments[currentVideo.id].push({ user: currentUser.username, text, avatar: `https://picsum.photos/id/${avatarId}/40/40` });
+        saveAll(); input.value = ''; renderCommentsWatch();
+    }
+    function renderRecommendationsWatch() {
+        const container = document.getElementById('recListWatch');
+        let other = videoDB.filter(v => v.id !== currentVideo.id);
+        if(other.length === 0) other = videoDB;
+        container.innerHTML = other.map(v => `
+            <div class="rec-item" onclick="selectVideoToWatch('${v.id}')">
+                <div class="rec-thumb" style="background-image:url('${v.thumb}')"></div>
+                <div class="rec-details"><div class="rec-title">${v.title}</div><div class="rec-channel">${v.channel}</div><div class="rec-meta">${v.views} x ditonton</div></div>
+            </div>
+        `).join('');
+    }
+    function addToHistory(videoId) {
+        if(!currentUser) return;
+        if(!watchHistory[currentUser.username]) watchHistory[currentUser.username] = [];
+        watchHistory[currentUser.username] = watchHistory[currentUser.username].filter(id => id !== videoId);
+        watchHistory[currentUser.username].unshift(videoId);
+        if(watchHistory[currentUser.username].length > 20) watchHistory[currentUser.username].pop();
+        saveAll();
+    }
+    window.selectVideoToWatch = (id) => {
+        const video = videoDB.find(v=>v.id===id);
+        if(video) {
+            currentVideo = video;
+            updateWatchUI();
+            addToHistory(video.id);
+            document.getElementById('feedPage').classList.remove('active');
+            document.getElementById('watchPage').classList.add('active');
+            document.getElementById('savedPage').classList.remove('active');
+            window.scrollTo({top:0, behavior:'smooth'});
+        }
+    }
+
+    // Halaman koleksi
+    window.showSavedPage = () => showCollectionPage('saved', 'Video Disimpan');
+    window.showHistoryPage = () => showCollectionPage('history', 'Riwayat Tontonan');
+    window.showLikedPage = () => showCollectionPage('liked', 'Video Disukai');
+    function showCollectionPage(mode, title) {
+        currentCollectionMode = mode;
+        document.getElementById('feedPage').classList.remove('active');
+        document.getElementById('watchPage').classList.remove('active');
+        document.getElementById('savedPage').classList.add('active');
+        document.getElementById('collectionTitle').innerHTML = `<i class="fas fa-${mode==='saved'?'bookmark':(mode==='history'?'history':'thumbs-up')}"></i> ${title}`;
+        renderCollectionGrid();
+        toggleSidebar();
+    }
+    function renderCollectionGrid() {
+        const grid = document.getElementById('collectionGrid');
+        if(!currentUser) { grid.innerHTML = '<p>Silakan login untuk melihat koleksi.</p>'; return; }
+        let ids = [];
+        if(currentCollectionMode==='saved') ids = saves[currentUser.username] || [];
+        else if(currentCollectionMode==='history') ids = watchHistory[currentUser.username] || [];
+        else if(currentCollectionMode==='liked') {
+            const userLikes = JSON.parse(localStorage.getItem('tubeUserLikes')) || {};
+            ids = Object.keys(userLikes).filter(k=>k.startsWith(currentUser.username+'_')).map(k=>k.split('_')[1]);
+        }
+        const videos = videoDB.filter(v=> ids.includes(v.id));
+        grid.innerHTML = videos.map(v=>`<div class="saved-card" onclick="selectVideoToWatch('${v.id}')"><div class="saved-thumb" style="background-image:url('${v.thumb}')"></div><div class="saved-info"><strong>${v.title}</strong><br><small>${v.channel}</small></div></div>`).join('');
+        if(videos.length===0) grid.innerHTML = '<p>Belum ada video.</p>';
+    }
+
+    // Inisialisasi awal: tampilkan feed
+    function init() {
+        renderUserArea();
+        renderFeed('');
+        // set default video
+        currentVideo = videoDB[0];
+        if(Object.keys(likes).length===0) { videoDB.forEach(v=> likes[v.id] = Math.floor(Math.random()*3000)+500); saveAll(); }
+        document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key==='Enter') performSearch(); });
+        window.onclick = (e) => { if(!e.target.closest('.user-menu')) document.getElementById('userDropdown')?.classList.remove('show'); }
+    }
+    init();
+</script>
+</body>
+</html>
